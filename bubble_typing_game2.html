@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bubble Typing Game</title>
+    <style>
+        body {
+            display: flex;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+            background: url('underwater-background.jpg') no-repeat center center/cover;
+            animation: waterFlow 10s infinite alternate;
+        }
+        @keyframes waterFlow {
+            0% { background-position: center top; }
+            100% { background-position: center bottom; }
+        }
+        #settings {
+            width: 250px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.8);
+        }
+        #gameArea {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            border: 5px solid black;
+        }
+        #scoreboard {
+            width: 250px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.8);
+        }
+        canvas {
+            background: transparent;
+        }
+        #timer {
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="settings">
+        <h3>Game Settings</h3>
+        <label>User Name: <input type="text" id="userName" placeholder="Enter your name"></label><br>
+        <label>Bubble Speed: <input type="number" id="bubbleSpeed" value="2.5" min="0.5" max="5" step="0.5"></label><br>
+        <label>Spawn Rate (ms): <input type="number" id="spawnRate" value="1000" min="500" max="5000" step="500"></label><br>
+        <h4>Key Practice Mode</h4>
+        <label><input type="radio" name="keyMode" value="random" checked> Random (Default)</label><br>
+        <label><input type="radio" name="keyMode" value="top"> Top Row</label><br>
+        <label><input type="radio" name="keyMode" value="middle"> Middle Row</label><br>
+        <label><input type="radio" name="keyMode" value="bottom"> Bottom Row</label><br>
+        <label><input type="radio" name="keyMode" value="custom"> Custom Keys: <input type="text" id="customKeys"></label><br>
+        <button onclick="applySettings()">Apply and Start</button>
+    </div>
+    <div id="gameArea">
+        <canvas id="gameCanvas"></canvas>
+    </div>
+    <div id="scoreboard">
+        <h3>Scoreboard</h3>
+        <p>User: <span id="playerName">-</span></p>
+        <p>WPM: <span id="wpm">0</span></p>
+        <p>Score: <span id="score">0</span></p>
+        <p id="timer">Time Left: 60s</p>
+        <h4>Game History</h4>
+        <ul id="gameHistory"></ul>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 800;
+        canvas.height = 600;
+
+        let bubbles = [];
+        let score = 0;
+        let spawnRate = 1000;
+        let gameSpeed = 2.5;
+        let timeLeft = 60;
+        let gameRunning = false;
+        let interval;
+        let gameHistory = [];
+
+        function startGame() {
+            score = 0;
+            document.getElementById("score").innerText = score;
+            timeLeft = 60;
+            bubbles = [];
+            gameRunning = true;
+            document.getElementById("playerName").innerText = document.getElementById("userName").value || "Player";
+            spawnBubble();
+            interval = setInterval(countdown, 1000);
+            update();
+        }
+
+        function applySettings() {
+            gameSpeed = parseFloat(document.getElementById('bubbleSpeed').value);
+            spawnRate = parseInt(document.getElementById('spawnRate').value);
+            startGame();
+        }
+
+        function spawnBubble() {
+            if (!gameRunning) return;
+            let letter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+            let x = Math.random() * (canvas.width - 40) + 20;
+            bubbles.push({ x, y: canvas.height, letter });
+            setTimeout(spawnBubble, spawnRate);
+        }
+
+        function countdown() {
+            timeLeft--;
+            document.getElementById("timer").innerText = "Time Left: " + timeLeft + "s";
+            if (timeLeft <= 0) {
+                gameRunning = false;
+                clearInterval(interval);
+                endGame();
+            }
+        }
+
+        function endGame() {
+            let userName = document.getElementById("userName").value || "Player";
+            alert("Time's up! " + userName + ", your score: " + score);
+            gameHistory.push(userName + " - " + score + " points");
+            updateHistory();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            bubbles = [];
+        }
+
+        function updateHistory() {
+            let historyList = document.getElementById("gameHistory");
+            historyList.innerHTML = "";
+            gameHistory.forEach(record => {
+                let li = document.createElement("li");
+                li.innerText = record;
+                historyList.appendChild(li);
+            });
+        }
+
+        function update() {
+            if (!gameRunning) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            bubbles.forEach(bubble => {
+                ctx.beginPath();
+                ctx.arc(bubble.x, bubble.y, 20, 0, Math.PI * 2);
+                ctx.fillStyle = "lightblue";
+                ctx.fill();
+                ctx.strokeStyle = "blue";
+                ctx.stroke();
+                ctx.fillStyle = "black";
+                ctx.font = "20px Arial";
+                ctx.fillText(bubble.letter, bubble.x - 7, bubble.y + 7);
+                bubble.y -= gameSpeed;
+            });
+            bubbles = bubbles.filter(bubble => bubble.y > 0);
+            requestAnimationFrame(update);
+        }
+
+        document.addEventListener('keydown', function(event) {
+            let typedLetter = event.key.toUpperCase();
+            bubbles = bubbles.filter(bubble => {
+                if (bubble.letter === typedLetter) {
+                    score += 10;
+                    document.getElementById("score").innerText = score;
+                    return false;
+                }
+                return true;
+            });
+        });
+    </script>
+</body>
+</html>
